@@ -40,12 +40,28 @@ def write_summary(
     pipeline_name: str,
     output_path: str,
 ) -> None:
-    """Write JSON summary to *output_path*, creating parent dirs as needed."""
+    """Write JSON summary to *output_path*, creating parent dirs as needed.
+
+    Raises:
+        OSError: If the file cannot be written (e.g. permission denied).
+    """
     summary = build_summary(report, pipeline_name)
-    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as fh:
-        json.dump(summary, fh, indent=2)
-        fh.write("\n")
+    abs_path = os.path.abspath(output_path)
+    parent_dir = os.path.dirname(abs_path)
+    try:
+        os.makedirs(parent_dir, exist_ok=True)
+    except OSError as exc:
+        raise OSError(
+            f"Failed to create output directory '{parent_dir}': {exc}"
+        ) from exc
+    try:
+        with open(abs_path, "w", encoding="utf-8") as fh:
+            json.dump(summary, fh, indent=2)
+            fh.write("\n")
+    except OSError as exc:
+        raise OSError(
+            f"Failed to write summary to '{abs_path}': {exc}"
+        ) from exc
 
 
 def maybe_write_summary(
