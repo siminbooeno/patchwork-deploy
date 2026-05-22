@@ -1,0 +1,22 @@
+# Example: intentionally invalid pipeline to demonstrate validator output.
+# Run with: python -m patchwork.cli run examples/invalid-demo.yml
+# (validation errors will be reported before execution begins)
+
+name: ""   # ERROR: name must not be empty
+
+env:
+  APP_ENV: staging
+
+steps:
+  - name: build
+    command: ""   # ERROR: command must not be empty
+    timeout: -10  # ERROR: timeout must be positive
+    rollback: ""  # ERROR: rollback must not be empty if specified
+
+  - name: build   # ERROR: duplicate step name
+    command: echo duplicate
+
+  # A valid step for contrast
+  - name: notify
+    command: echo "deploy finished"
+    timeout: 5
