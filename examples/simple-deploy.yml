@@ -1,0 +1,31 @@
+# Example patchwork-deploy pipeline configuration
+name: simple-web-deploy
+working_dir: /var/www/myapp
+
+env:
+  APP_ENV: production
+  LOG_LEVEL: info
+
+steps:
+  - name: pull-latest
+    run: git pull origin main
+    rollback: git reset --hard HEAD@{1}
+
+  - name: install-dependencies
+    run: pip install -r requirements.txt --quiet
+    rollback: pip install -r requirements.txt.bak --quiet
+
+  - name: run-migrations
+    run: python manage.py migrate --noinput
+    rollback: python manage.py migrate_rollback
+    env:
+      DATABASE_URL: postgres://localhost/myapp_prod
+
+  - name: collect-static
+    run: python manage.py collectstatic --noinput
+    ignore_errors: false
+
+  - name: restart-service
+    run: systemctl restart myapp
+    rollback: systemctl restart myapp
+    ignore_errors: true
