@@ -1,0 +1,38 @@
+pipeline:
+  name: filter-demo
+  description: >
+    Demonstrates step filtering by tag and name.
+    Run with --tags or --names to execute a subset of steps.
+
+steps:
+  - name: install-deps
+    command: echo "Installing dependencies"
+    tags:
+      - setup
+
+  - name: run-lint
+    command: echo "Running linter"
+    tags:
+      - ci
+      - fast
+
+  - name: run-tests
+    command: echo "Running test suite"
+    tags:
+      - ci
+      - slow
+
+  - name: build-image
+    command: echo "Building Docker image"
+    tags:
+      - deploy
+
+  - name: push-image
+    command: echo "Pushing Docker image"
+    tags:
+      - deploy
+
+  - name: notify-slack
+    command: echo "Sending Slack notification"
+    tags:
+      - notification
