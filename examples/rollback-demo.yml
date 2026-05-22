@@ -1,0 +1,30 @@
+name: rollback-demo
+
+steps:
+  - name: prepare
+    run: echo "Preparing deployment..."
+
+  - name: migrate-db
+    run: echo "Running DB migrations..."
+
+  - name: deploy-app
+    run: echo "Deploying application..."
+
+  - name: smoke-test
+    # Simulate a failure to trigger rollback
+    run: |
+      echo "Running smoke tests..."
+      exit 1
+
+rollback:
+  - name: revert-db
+    run: echo "Reverting DB migrations..."
+
+  - name: restore-previous-release
+    run: echo "Restoring previous release artifact..."
+
+  - name: notify-team
+    run: echo "Notifying team of rollback via Slack..."
+
+notify:
+  summary_file: /tmp/rollback-demo-summary.json
