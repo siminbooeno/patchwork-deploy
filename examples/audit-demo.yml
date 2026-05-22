@@ -1,0 +1,32 @@
+# audit-demo.yml — demonstrates audit logging via PATCHWORK_AUDIT env var
+#
+# Run with:
+#   PATCHWORK_AUDIT=./audit.jsonl patchwork run examples/audit-demo.yml
+#
+# Then inspect the log:
+#   patchwork audit list ./audit.jsonl
+#   patchwork audit stats ./audit.jsonl
+#   patchwork audit export ./audit.jsonl
+
+pipeline: audit-demo
+
+steps:
+  - name: preflight-check
+    command: echo "Running preflight checks..."
+
+  - name: build-image
+    command: echo "Building container image v1.2.3"
+
+  - name: run-tests
+    command: echo "All 42 tests passed"
+
+  - name: push-image
+    command: echo "Pushing image to registry"
+    rollback: echo "Removing pushed image from registry"
+
+  - name: deploy-staging
+    command: echo "Deploying to staging environment"
+    rollback: echo "Rolling back staging deployment"
+
+  - name: smoke-test
+    command: echo "Smoke tests passed on staging"
