@@ -1,0 +1,33 @@
+# Example pipeline demonstrating lifecycle hooks and JSON summary output.
+
+name: hooks-demo
+
+steps:
+  - name: compile
+    run: echo "Compiling..."
+    hooks:
+      on_success:
+        - echo "Compile succeeded"
+      on_failure:
+        - echo "Compile failed — notifying team"
+      on_always:
+        - echo "Compile step finished"
+
+  - name: test
+    run: echo "Running tests..."
+    hooks:
+      on_success: echo "All tests passed"
+      on_failure:
+        - echo "Tests failed"
+        - echo "Uploading failure logs"
+
+  - name: deploy
+    run: echo "Deploying to staging"
+    hooks:
+      on_always: echo "Deploy step done"
+
+# Run with summary output:
+#   patchwork run examples/hooks-demo.yml --summary /tmp/deploy-summary.json
+#
+# Dry-run (hooks also skipped / marked [dry-run]):
+#   patchwork run examples/hooks-demo.yml --dry-run
