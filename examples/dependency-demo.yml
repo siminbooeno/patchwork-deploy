@@ -1,0 +1,28 @@
+# dependency-demo.yml — demonstrates depends_on between steps
+pipeline: dependency-demo
+env:
+  APP_DIR: /tmp/dep-demo
+
+steps:
+  - name: create-workspace
+    command: mkdir -p $APP_DIR
+
+  - name: write-config
+    command: echo "config=true" > $APP_DIR/app.conf
+    depends_on: create-workspace
+
+  - name: write-assets
+    command: echo "asset" > $APP_DIR/asset.txt
+    depends_on: create-workspace
+
+  - name: verify
+    command: ls $APP_DIR
+    depends_on:
+      - write-config
+      - write-assets
+    tags: [verify]
+
+  - name: cleanup
+    command: rm -rf $APP_DIR
+    depends_on: verify
+    rollback: echo "nothing to rollback"
