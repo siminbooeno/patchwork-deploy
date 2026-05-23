@@ -67,6 +67,13 @@ def test_resolve_dict_raises_on_missing_required():
         resolve_dict({"key": "${NO_SUCH_VAR}"}, _ENV)
 
 
+def test_resolve_dict_non_string_values_passed_through():
+    """Non-string values (int, bool, None) in a dict should not be modified."""
+    data = {"retries": 3, "enabled": True, "comment": None, "host": "${HOST}"}
+    result = resolve_dict(data, _ENV)
+    assert result == {"retries": 3, "enabled": True, "comment": None, "host": "example.com"}
+
+
 def test_uses_os_environ_by_default(monkeypatch):
     monkeypatch.setenv("PW_TEST_VAR", "live_value")
     assert resolve("${PW_TEST_VAR}") == "live_value"
