@@ -96,3 +96,12 @@ def test_backoff_increases_delay():
     policy = RetryPolicy(max_attempts=3, delay_seconds=1.0, backoff_factor=2.0)
     run_with_retry(policy, _fail, _sleep=delays.append)
     assert delays == [1.0, 2.0]
+
+
+def test_outcome_contains_last_result():
+    """The outcome should expose the result from the final attempt."""
+    policy = RetryPolicy(max_attempts=3)
+    outcome = run_with_retry(policy, _fail, _sleep=lambda _: None)
+    assert outcome.last_result is not None
+    assert outcome.last_result.returncode == 1
+    assert outcome.last_result.stderr == "err"
