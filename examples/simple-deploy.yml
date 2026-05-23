@@ -29,3 +29,10 @@ steps:
     run: systemctl restart myapp
     rollback: systemctl restart myapp
     ignore_errors: true
+
+  - name: health-check
+    run: curl --fail --silent --max-time 10 http://localhost/health
+    rollback: systemctl restart myapp
+    retry:
+      attempts: 3
+      delay: 5
