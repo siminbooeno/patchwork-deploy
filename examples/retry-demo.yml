@@ -1,0 +1,31 @@
+# retry-demo.yml — demonstrates per-step retry configuration
+pipeline: retry-demo
+
+steps:
+  - name: flaky-network-check
+    command: curl -sf https://example.com/health
+    tags: [network]
+    # Retry up to 3 times with a 2-second delay that doubles each attempt
+    retry:
+      attempts: 3
+      delay: 2.0
+      backoff: 2.0
+    rollback: echo "health check ultimately failed"
+
+  - name: install-dependencies
+    command: pip install -r requirements.txt
+    tags: [setup]
+    # Simple integer shorthand: retry twice (1 original + 1 retry)
+    retry: 2
+
+  - name: run-migrations
+    command: python manage.py migrate --noinput
+    tags: [db]
+    # No retry — default behaviour (single attempt)
+
+  - name: smoke-test
+    command: pytest tests/smoke/ -q
+    tags: [test]
+    retry:
+      attempts: 2
+      delay: 5.0

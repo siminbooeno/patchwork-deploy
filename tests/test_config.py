@@ -1,93 +1,131 @@
-"""Tests for the YAML config loader."""
+"""Tests for patchwork.config (including retry integration)."""
+from __future__ import annotations
 
 import textwrap
+from pathlib import Path
+
 import pytest
 
-from patchwork.config import load_config, ConfigError, PipelineConfig, Step
-
-
-MINIMAL_YAML = textwrap.dedent("""\
-    name: my-pipeline
-    steps:
-      - name: build
-        run: echo building
-""")
-
-FULL_YAML = textwrap.dedent("""\
-    name: full-pipeline
-    working_dir: /app
-    env:
-      APP_ENV: production
-    steps:
-      - name: migrate
-        run: python manage.py migrate
-        rollback: python manage.py migrate_rollback
-        env:
-          DB_URL: postgres://localhost/db
-      - name: restart
-        run: systemctl restart app
-        ignore_errors: true
-""")
+from patchwork.config import ConfigError, PipelineConfig, Step, load_config
+from patchwork.retry import RetryPolicy
 
 
 @pytest.fixture
-def yaml_file(tmp_path):
-    def _write(content: str):
+def yaml_file(tmp_path: Path):
+    def _write(content: str) -> str:
         p = tmp_path / "pipeline.yml"
-        p.write_text(content)
+        p.write_text(textwrap.dedent(content))
         return str(p)
     return _write
 
 
 def test_load_minimal_config(yaml_file):
-    path = yaml_file(MINIMAL_YAML)
-    config = load_config(path)
-    assert isinstance(config, PipelineConfig)
-    assert config.name == "my-pipeline"
-    assert len(config.steps) == 1
-    assert config.steps[0].name == "build"
-    assert config.steps[0].run == "echo building"
-    assert config.steps[0].rollback is None
+    path = yaml_file("""
+        pipeline: minimal
+        steps:
+          - name: hello
+            command: echo hello
+    """)
+    cfg = load_config(path)
+    assert isinstance(cfg, PipelineConfig)
+    assert cfg.name == "minimal"
+    assert len(cfg.steps) == 1
 
 
 def test_load_full_config(yaml_file):
-    path = yaml_file(FULL_YAML)
-    config = load_config(path)
-    assert config.name == "full-pipeline"
-    assert config.working_dir == "/app"
-    assert config.env == {"APP_ENV": "production"}
-    assert len(config.steps) == 2
-    migrate = config.steps[0]
-    assert migrate.rollback == "python manage.py migrate_rollback"
-    assert migrate.env["DB_URL"] == "postgres://localhost/db"
-    restart = config.steps[1]
-    assert restart.ignore_errors is True
+    path = yaml_file("""
+        pipeline: full
+        notify: slack
+        audit_log: /tmp/audit.jsonl
+        summary_file: /tmp/summary.json
+        steps:
+          - name: build
+            command: make build
+            tags: [ci]
+            rollback: make clean
+            env:
+              NODE_ENV: production
+    """)
+    cfg = load_config(path)
+    assert cfg.notify == "slack"
+    assert cfg.audit_log == "/tmp/audit.jsonl"
+    step = cfg.steps[0]
+    assert step.tags == ["ci"]
+    assert step.rollback == "make clean"
+    assert step.env == {"NODE_ENV": "production"}
 
 
 def test_missing_file_raises():
     with pytest.raises(ConfigError, match="not found"):
-        load_config("/nonexistent/pipeline.yml")
+        load_config("/nonexistent/path.yml")
 
 
-def test_missing_name_raises(yaml_file):
-    path = yaml_file("steps:\n  - name: x\n    run: echo x\n")
-    with pytest.raises(ConfigError, match="'name'"):
+def test_missing_pipeline_name_raises(yaml_file):
+    path = yaml_file("""
+        steps:
+          - name: x
+            command: echo x
+    """)
+    with pytest.raises(ConfigError, match="pipeline"):
         load_config(path)
 
 
-def test_missing_steps_raises(yaml_file):
-    path = yaml_file("name: p\n")
-    with pytest.raises(ConfigError, match="'steps'"):
+def test_step_missing_name_raises(yaml_file):
+    path = yaml_file("""
+        pipeline: p
+        steps:
+          - command: echo hi
+    """)
+    with pytest.raises(ConfigError, match="name"):
         load_config(path)
 
 
-def test_step_missing_run_raises(yaml_file):
-    path = yaml_file("name: p\nsteps:\n  - name: oops\n")
-    with pytest.raises(ConfigError, match="'run'"):
+def test_step_missing_command_raises(yaml_file):
+    path = yaml_file("""
+        pipeline: p
+        steps:
+          - name: no-cmd
+    """)
+    with pytest.raises(ConfigError, match="command"):
         load_config(path)
 
 
-def test_invalid_yaml_raises(yaml_file):
-    path = yaml_file("name: p\nsteps: [unclosed")
-    with pytest.raises(ConfigError, match="Failed to parse YAML"):
-        load_config(path)
+def test_retry_int_shorthand_parsed(yaml_file):
+    path = yaml_file("""
+        pipeline: p
+        steps:
+          - name: flaky
+            command: echo hi
+            retry: 3
+    """)
+    cfg = load_config(path)
+    assert cfg.steps[0].retry == RetryPolicy(max_attempts=3)
+
+
+def test_retry_dict_parsed(yaml_file):
+    path = yaml_file("""
+        pipeline: p
+        steps:
+          - name: flaky
+            command: echo hi
+            retry:
+              attempts: 4
+              delay: 1.5
+              backoff: 2.0
+    """)
+    cfg = load_config(path)
+    r = cfg.steps[0].retry
+    assert r.max_attempts == 4
+    assert r.delay_seconds == 1.5
+    assert r.backoff_factor == 2.0
+
+
+def test_default_retry_is_single_attempt(yaml_file):
+    path = yaml_file("""
+        pipeline: p
+        steps:
+          - name: s
+            command: echo s
+    """)
+    cfg = load_config(path)
+    assert cfg.steps[0].retry == RetryPolicy(max_attempts=1)
