@@ -1,0 +1,29 @@
+# gate-demo.yml — demonstrates the step gate (pause-and-confirm) feature.
+#
+# Run with:
+#   python -m patchwork.cli run examples/gate-demo.yml
+# Skip interactive prompts in CI:
+#   python -m patchwork.cli run examples/gate-demo.yml --dry-run
+
+pipeline: gate-demo
+
+steps:
+  - name: build
+    command: echo "Building artefacts..."
+
+  - name: run-tests
+    command: echo "All tests passed."
+
+  - name: confirm-production-deploy
+    command: echo "Deploying to production!"
+    gate: "You are about to deploy to PRODUCTION. Continue?"
+
+  - name: migrate-database
+    command: echo "Running database migrations..."
+    gate:
+      enabled: true
+      message: "Apply DB migrations? This cannot be undone."
+      timeout: 60
+
+  - name: smoke-test
+    command: echo "Smoke tests complete."
