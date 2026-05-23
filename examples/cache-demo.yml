@@ -1,0 +1,31 @@
+# cache-demo.yml — demonstrate step caching
+# Run twice: second run skips unchanged steps automatically.
+#
+# Usage:
+#   python -m patchwork.cli run examples/cache-demo.yml --cache
+#   python -m patchwork.cli run examples/cache-demo.yml --cache   # steps skipped
+
+pipeline: cache-demo
+
+steps:
+  - name: install-deps
+    command: echo "pip install -r requirements.txt"
+    tags: [setup]
+
+  - name: lint
+    command: echo "ruff check ."
+    tags: [quality]
+
+  - name: test
+    command: echo "pytest tests/"
+    tags: [quality, test]
+
+  - name: build
+    command: echo "python -m build"
+    tags: [build]
+    rollback: echo "rm -rf dist/"
+
+  - name: deploy
+    command: echo "scp dist/*.whl user@host:/opt/app/"
+    tags: [deploy]
+    rollback: echo "scp dist/*.whl.bak user@host:/opt/app/"
