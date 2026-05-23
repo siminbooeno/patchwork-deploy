@@ -1,0 +1,39 @@
+# label-demo.yml — demonstrates step label and grouping feature
+pipeline: label-demo
+
+steps:
+  - name: lint
+    command: echo "running lint"
+    label:
+      display: Lint Code
+      group: quality
+      icon: "🔍"
+      tags:
+        - lint
+        - fast
+
+  - name: unit-tests
+    command: echo "running unit tests"
+    label:
+      display: Unit Tests
+      group: quality
+      icon: "✅"
+      tags: [test]
+
+  - name: build-image
+    command: echo "building docker image"
+    label:
+      display: Build Image
+      group: ci
+      icon: "🔨"
+
+  - name: push-image
+    command: echo "pushing image"
+    label:
+      display: Push Image
+      group: ci
+      icon: "📦"
+
+  - name: notify
+    command: echo "sending notification"
+    label: Notify Team
