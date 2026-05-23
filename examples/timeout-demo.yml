@@ -1,0 +1,27 @@
+# timeout-demo.yml — demonstrate per-step timeout enforcement
+pipeline:
+  name: timeout-demo
+  description: Shows how step timeouts are configured
+
+steps:
+  - name: fast-check
+    command: echo "fast step complete"
+    timeout: 10s
+    tags: [demo]
+
+  - name: build
+    command: echo "building..."
+    timeout: 2m
+    tags: [demo, build]
+
+  - name: integration-test
+    command: echo "tests passed"
+    timeout: 300
+    tags: [demo, test]
+
+  - name: deploy
+    command: echo "deployed"
+    timeout: 1.5m
+    tags: [demo, deploy]
+    rollback:
+      command: echo "rollback deploy"
