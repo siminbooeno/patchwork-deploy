@@ -64,6 +64,29 @@ def write_summary(
         ) from exc
 
 
+def read_summary(input_path: str) -> dict:
+    """Read and parse a JSON summary file previously written by :func:`write_summary`.
+
+    Args:
+        input_path: Path to the JSON summary file.
+
+    Returns:
+        The parsed summary as a dictionary.
+
+    Raises:
+        OSError: If the file cannot be read.
+        ValueError: If the file does not contain valid JSON.
+    """
+    abs_path = os.path.abspath(input_path)
+    try:
+        with open(abs_path, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except OSError as exc:
+        raise OSError(f"Failed to read summary from '{abs_path}': {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON in summary file '{abs_path}': {exc}") from exc
+
+
 def maybe_write_summary(
     report: ExecutionReport,
     pipeline_name: str,
